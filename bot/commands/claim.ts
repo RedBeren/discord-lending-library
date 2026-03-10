@@ -3,7 +3,7 @@ import {
   ChatInputCommandInteraction,
   SlashCommandBuilder,
 } from "discord.js";
-import { supabase } from "../lib/supabase";
+import { getSupabase } from "../lib/supabase";
 
 export const data = new SlashCommandBuilder()
   .setName("claim")
@@ -19,7 +19,7 @@ export const data = new SlashCommandBuilder()
 export async function autocomplete(interaction: AutocompleteInteraction) {
   const focused = interaction.options.getFocused();
 
-  const { data: listings } = await supabase
+  const { data: listings } = await getSupabase()
     .from("listings")
     .select("id, books(title, author)")
     .eq("status", "available")
@@ -46,6 +46,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   await interaction.deferReply({ ephemeral: true });
 
   const listingId = interaction.options.getString("listing", true);
+  const supabase = getSupabase();
 
   // Resolve claimant member
   const { data: claimant } = await supabase

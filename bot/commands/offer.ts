@@ -3,7 +3,7 @@ import {
   ChatInputCommandInteraction,
   SlashCommandBuilder,
 } from "discord.js";
-import { supabase } from "../lib/supabase";
+import { getSupabase } from "../lib/supabase";
 import { searchBooks } from "../lib/google-books";
 
 export const data = new SlashCommandBuilder()
@@ -28,7 +28,7 @@ export async function autocomplete(interaction: AutocompleteInteraction) {
   if (!focused) return interaction.respond([]);
 
   // 1. Check existing books table with pg_trgm similarity
-  const { data: books } = await supabase
+  const { data: books } = await getSupabase()
     .from("books")
     .select("id, title, author")
     .textSearch("title", focused, { type: "websearch", config: "english" })
@@ -57,7 +57,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const pickupNotes = interaction.options.getString("pickup_notes");
 
   // Resolve member record
-  const { data: member } = await supabase
+  const { data: member } = await getSupabase()
     .from("members")
     .select("id")
     .eq("discord_id", interaction.user.id)
@@ -72,7 +72,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   // Resolve book — value is either a DB uuid or a Google Books id
   let bookId: string;
 
-  const { data: existingBook } = await supabase
+  const { data: existingBook } = await getSupabase()
     .from("books")
     .select("id")
     .eq("id", bookValue)
@@ -82,7 +82,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     bookId = existingBook.id;
   } else {
     // Look up by google_id
-    const { data: byGoogleId } = await supabase
+    const { data: byGoogleId } = await getSupabase()
       .from("books")
       .select("id")
       .eq("google_id", bookValue)
@@ -99,7 +99,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
         return interaction.editReply("Could not find that book. Try a different search.");
       }
 
-      const { data: inserted, error } = await supabase
+      const { data: inserted, error } = await getSupabase()
         .from("books")
         .insert(match)
         .select("id")
@@ -114,7 +114,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   }
 
   // Create listing
-  const { error } = await supabase.from("listings").insert({
+  const { error } = await getSupabase().from("listings").insert({
     book_id: bookId,
     offered_by: member.id,
     pickup_notes: pickupNotes ?? null,
@@ -129,7 +129,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   // Notify via webhook
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
   if (webhookUrl) {
-    const { data: book } = await supabase
+    const { data: book } = await getSupabase()
       .from("books")
       .select("title, author")
       .eq("id", bookId)

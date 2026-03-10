@@ -15,6 +15,7 @@ export type Database = {
         Update: {
           discord_username?: string;
         };
+        Relationships: [];
       };
       books: {
         Row: {
@@ -39,7 +40,17 @@ export type Database = {
           year_published?: number | null;
           google_id?: string | null;
         };
-        Update: Partial<Database["public"]["Tables"]["books"]["Insert"]>;
+        Update: {
+          title?: string;
+          author?: string;
+          isbn_13?: string | null;
+          cover_url?: string | null;
+          avg_rating?: number | null;
+          description?: string | null;
+          year_published?: number | null;
+          google_id?: string | null;
+        };
+        Relationships: [];
       };
       listings: {
         Row: {
@@ -55,12 +66,14 @@ export type Database = {
           book_id: string;
           offered_by: string;
           status?: "available" | "claimed" | "completed";
+          created_at?: string;
           pickup_notes?: string | null;
         };
         Update: {
           status?: "available" | "claimed" | "completed";
           pickup_notes?: string | null;
         };
+        Relationships: [];
       };
       claims: {
         Row: {
@@ -75,8 +88,15 @@ export type Database = {
           claimant_member_id: string;
           claimed_at?: string;
         };
-        Update: never;
+        Update: {
+          claimed_at?: string;
+        };
+        Relationships: [];
       };
     };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
   };
 };
