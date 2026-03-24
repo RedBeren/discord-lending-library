@@ -27,27 +27,32 @@ export async function autocomplete(interaction: AutocompleteInteraction) {
   const focused = interaction.options.getFocused();
   if (!focused) return interaction.respond([]);
 
-  // 1. Check existing books table with partial match
-  const { data: books } = await getSupabase()
-    .from("books")
-    .select("id, title, author")
-    .ilike("title", `%${focused}%`)
-    .limit(5);
+  try {
+    // 1. Check existing books table with partial match
+    const { data: books } = await getSupabase()
+      .from("books")
+      .select("id, title, author")
+      .ilike("title", `%${focused}%`)
+      .limit(5);
 
-  if (books?.length) {
+    if (books?.length) {
+      return interaction.respond(
+        books.map((b) => ({ name: `${b.title} — ${b.author}`, value: b.id }))
+      );
+    }
+
+    // 2. Fall back to Google Books API
+    const results = await searchBooks(focused);
     return interaction.respond(
-      books.map((b) => ({ name: `${b.title} — ${b.author}`, value: b.id }))
+      results.map((b) => ({
+        name: `${b.title} — ${b.author}`.slice(0, 100),
+        value: b.google_id,
+      }))
     );
+  } catch (err) {
+    console.error("offer autocomplete error:", err);
+    return interaction.respond([]);
   }
-
-  // 2. Fall back to Google Books API
-  const results = await searchBooks(focused);
-  return interaction.respond(
-    results.map((b) => ({
-      name: `${b.title} — ${b.author}`.slice(0, 100),
-      value: b.google_id,
-    }))
-  );
 }
 
 export async function execute(interaction: ChatInputCommandInteraction) {
