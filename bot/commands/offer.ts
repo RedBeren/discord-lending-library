@@ -27,11 +27,11 @@ export async function autocomplete(interaction: AutocompleteInteraction) {
   const focused = interaction.options.getFocused();
   if (!focused) return interaction.respond([]);
 
-  // 1. Check existing books table with pg_trgm similarity
+  // 1. Check existing books table with partial match
   const { data: books } = await getSupabase()
     .from("books")
     .select("id, title, author")
-    .textSearch("title", focused, { type: "websearch", config: "english" })
+    .ilike("title", `%${focused}%`)
     .limit(5);
 
   if (books?.length) {
