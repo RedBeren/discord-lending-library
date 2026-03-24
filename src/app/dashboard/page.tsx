@@ -9,7 +9,16 @@ export default async function Dashboard() {
 
   if (!user) redirect("/");
 
-  const { data: listings } = await supabase
+  type ListingRow = {
+    id: string;
+    status: string;
+    pickup_notes: string | null;
+    created_at: string;
+    books: { title: string; author: string; cover_url: string | null } | null;
+    members: { discord_username: string } | null;
+  };
+
+  const { data: listingsRaw } = await supabase
     .from("listings")
     .select(
       `
@@ -23,6 +32,8 @@ export default async function Dashboard() {
     )
     .eq("status", "available")
     .order("created_at", { ascending: false });
+
+  const listings = listingsRaw as ListingRow[] | null;
 
   return (
     <main style={{ maxWidth: 800, margin: "0 auto", padding: "2rem 1rem" }}>
@@ -61,7 +72,7 @@ export default async function Dashboard() {
               gap: "1rem",
             }}
           >
-            {listing.books && "cover_url" in listing.books && listing.books.cover_url && (
+            {listing.books?.cover_url && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={listing.books.cover_url}
@@ -71,15 +82,9 @@ export default async function Dashboard() {
               />
             )}
             <div>
-              <strong>
-                {listing.books && "title" in listing.books
-                  ? listing.books.title
-                  : "Unknown"}
-              </strong>
+              <strong>{listing.books?.title ?? "Unknown"}</strong>
               <p style={{ margin: "0.25rem 0", color: "#6b7280", fontSize: "0.875rem" }}>
-                {listing.books && "author" in listing.books
-                  ? listing.books.author
-                  : ""}
+                {listing.books?.author ?? ""}
               </p>
               {listing.pickup_notes && (
                 <p style={{ margin: 0, fontSize: "0.875rem" }}>
