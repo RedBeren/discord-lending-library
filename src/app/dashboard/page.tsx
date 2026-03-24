@@ -71,7 +71,9 @@ export default async function Dashboard() {
         {listings?.map((listing) => {
           const book = listing.books;
           const googleUrl = book?.google_id
-            ? `https://books.google.com/books?id=${book.google_id}`
+            ? `https://www.google.com/books/edition/${
+                (book.title ?? "").replace(/[^a-zA-Z0-9]+/g, "_").replace(/^_|_$/g, "")
+              }/${book.google_id}`
             : null;
 
           return (
