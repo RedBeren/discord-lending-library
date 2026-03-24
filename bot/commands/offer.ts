@@ -31,21 +31,26 @@ export async function autocomplete(interaction: AutocompleteInteraction) {
     // 1. Check existing books table with partial match
     const { data: books } = await getSupabase()
       .from("books")
-      .select("id, title, author")
+      .select("id, title, author, year_published")
       .ilike("title", `%${focused}%`)
+      .order("year_published", { ascending: false, nullsFirst: false })
       .limit(5);
 
     if (books?.length) {
       return interaction.respond(
-        books.map((b) => ({ name: `${b.title} — ${b.author}`, value: b.id }))
+        books.map((b) => ({
+          name: `${b.title} — ${b.author}${b.year_published ? ` (${b.year_published})` : ""}`.slice(0, 100),
+          value: b.id,
+        }))
       );
     }
 
     // 2. Fall back to Google Books API
     const results = await searchBooks(focused);
+    results.sort((a, b) => (b.year_published ?? 0) - (a.year_published ?? 0));
     return interaction.respond(
       results.map((b) => ({
-        name: `${b.title} — ${b.author}`.slice(0, 100),
+        name: `${b.title} — ${b.author}${b.year_published ? ` (${b.year_published})` : ""}`.slice(0, 100),
         value: b.google_id,
       }))
     );
