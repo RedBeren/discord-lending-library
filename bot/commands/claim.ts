@@ -70,7 +70,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   const { data: listing } = await supabase
     .from("listings")
     .select(
-      "id, status, pickup_notes, offered_by, books(title, author), members!offered_by(discord_id)"
+      "id, status, pickup_notes, offered_by, books(title, author, cover_url), members!offered_by(discord_id)"
     )
     .eq("id", listingId)
     .single();
@@ -98,7 +98,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     .update({ status: "claimed" })
     .eq("id", listingId);
 
-  const book = listing.books as unknown as { title: string; author: string } | null;
+  const book = listing.books as unknown as { title: string; author: string; cover_url: string | null } | null;
   const offerer = listing.members as unknown as { discord_id: string } | null;
 
   await interaction.editReply(
@@ -109,10 +109,18 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   if (offerer?.discord_id) {
     try {
       const offererUser = await interaction.client.users.fetch(offerer.discord_id);
-      await offererUser.send(
-        `📬 <@${interaction.user.id}> (**${interaction.user.username}**) has claimed your copy of **${book?.title}**!\n` +
-          (listing.pickup_notes ? `Pickup notes: ${listing.pickup_notes}` : "Arrange pickup directly.")
-      );
+      await offererUser.send({
+        embeds: [
+          {
+            title: book?.title ?? "Unknown",
+            description:
+              `<@${interaction.user.id}> (**${interaction.user.username}**) has claimed your copy!\n\n` +
+              (listing.pickup_notes ? `Pickup notes: ${listing.pickup_notes}` : "Arrange pickup directly."),
+            color: 0x5865f2,
+            ...(book?.cover_url ? { thumbnail: { url: book.cover_url } } : {}),
+          },
+        ],
+      });
     } catch {
       // User may have DMs disabled — silently continue
     }
@@ -120,13 +128,21 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   // DM the claimant
   try {
-    await interaction.user.send(
-      `You've claimed **${book?.title}** by ${book?.author}. ` +
-        (offerer?.discord_id
-          ? `Contact <@${offerer.discord_id}> to arrange pickup.`
-          : "Contact the offerer to arrange pickup.") +
-        (listing.pickup_notes ? `\nPickup notes: ${listing.pickup_notes}` : "")
-    );
+    await interaction.user.send({
+      embeds: [
+        {
+          title: book?.title ?? "Unknown",
+          description:
+            `by ${book?.author ?? "Unknown"}\n\n` +
+            (offerer?.discord_id
+              ? `Contact <@${offerer.discord_id}> to arrange pickup.`
+              : "Contact the offerer to arrange pickup.") +
+            (listing.pickup_notes ? `\n\nPickup notes: ${listing.pickup_notes}` : ""),
+          color: 0x5865f2,
+          ...(book?.cover_url ? { thumbnail: { url: book.cover_url } } : {}),
+        },
+      ],
+    });
   } catch {
     // DMs disabled
   }

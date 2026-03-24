@@ -136,7 +136,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   if (webhookUrl) {
     const { data: book } = await getSupabase()
       .from("books")
-      .select("title, author")
+      .select("title, author, cover_url")
       .eq("id", bookId)
       .single();
 
@@ -144,7 +144,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        content: `📚 **${book?.title}** by ${book?.author} is now available, offered by <@${interaction.user.id}>!`,
+        embeds: [
+          {
+            title: book?.title ?? "Unknown",
+            description: `by ${book?.author ?? "Unknown"}\n\nOffered by <@${interaction.user.id}>`,
+            color: 0x5865f2,
+            ...(book?.cover_url ? { thumbnail: { url: book.cover_url } } : {}),
+          },
+        ],
       }),
     }).catch(() => null);
   }
