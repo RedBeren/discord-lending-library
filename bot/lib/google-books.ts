@@ -11,6 +11,32 @@ export interface BookResult {
   year_published: number | null;
 }
 
+export async function fetchBookById(googleId: string): Promise<BookResult | null> {
+  const key = process.env.GOOGLE_BOOKS_API_KEY;
+  const params = key ? `?key=${key}` : "";
+  const res = await fetch(`${BASE}/volumes/${encodeURIComponent(googleId)}${params}`);
+  if (!res.ok) return null;
+
+  const item = await res.json();
+  const info = item.volumeInfo as Record<string, unknown>;
+  const isbn13 = ((info.industryIdentifiers as Array<{ type: string; identifier: string }>) ?? [])
+    .find((x) => x.type === "ISBN_13")?.identifier ?? null;
+  const thumb = (info.imageLinks as Record<string, string> | undefined)?.thumbnail ?? null;
+
+  return {
+    google_id: item.id as string,
+    title: (info.title as string) ?? "Unknown",
+    author: ((info.authors as string[]) ?? []).join(", ") || "Unknown",
+    isbn_13: isbn13,
+    cover_url: thumb?.replace("http:", "https:") ?? null,
+    avg_rating: (info.averageRating as number) ?? null,
+    description: (info.description as string) ?? null,
+    year_published: info.publishedDate
+      ? parseInt((info.publishedDate as string).slice(0, 4))
+      : null,
+  };
+}
+
 export async function searchBooks(query: string): Promise<BookResult[]> {
   const key = process.env.GOOGLE_BOOKS_API_KEY;
   const params = new URLSearchParams({ q: query, maxResults: "5" });

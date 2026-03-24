@@ -4,7 +4,7 @@ import {
   SlashCommandBuilder,
 } from "discord.js";
 import { getSupabase } from "../lib/supabase";
-import { searchBooks } from "../lib/google-books";
+import { fetchBookById, searchBooks } from "../lib/google-books";
 
 export const data = new SlashCommandBuilder()
   .setName("offer")
@@ -97,8 +97,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       bookId = byGoogleId.id;
     } else {
       // Insert from Google Books
-      const results = await searchBooks(bookValue);
-      const match = results.find((b) => b.google_id === bookValue) ?? results[0];
+      const match = await fetchBookById(bookValue);
 
       if (!match) {
         return interaction.editReply("Could not find that book. Try a different search.");
