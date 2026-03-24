@@ -19,27 +19,32 @@ export const data = new SlashCommandBuilder()
 export async function autocomplete(interaction: AutocompleteInteraction) {
   const focused = interaction.options.getFocused();
 
-  const { data: listings } = await getSupabase()
-    .from("listings")
-    .select("id, books(title, author)")
-    .eq("status", "available")
-    .limit(25);
+  try {
+    const { data: listings } = await getSupabase()
+      .from("listings")
+      .select("id, books(title, author)")
+      .eq("status", "available")
+      .limit(25);
 
-  const choices = (listings ?? [])
-    .filter((l) => {
-      if (!focused) return true;
-      const book = l.books as { title: string; author: string } | null;
-      return book?.title.toLowerCase().includes(focused.toLowerCase());
-    })
-    .map((l) => {
-      const book = l.books as { title: string; author: string } | null;
-      return {
-        name: `${book?.title ?? "Unknown"} — ${book?.author ?? ""}`.slice(0, 100),
-        value: l.id,
-      };
-    });
+    const choices = (listings ?? [])
+      .filter((l) => {
+        if (!focused) return true;
+        const book = l.books as unknown as { title: string; author: string } | null;
+        return book?.title.toLowerCase().includes(focused.toLowerCase());
+      })
+      .map((l) => {
+        const book = l.books as unknown as { title: string; author: string } | null;
+        return {
+          name: `${book?.title ?? "Unknown"} — ${book?.author ?? ""}`.slice(0, 100),
+          value: l.id,
+        };
+      });
 
-  return interaction.respond(choices);
+    return interaction.respond(choices);
+  } catch (err) {
+    console.error("claim autocomplete error:", err);
+    return interaction.respond([]);
+  }
 }
 
 export async function execute(interaction: ChatInputCommandInteraction) {
@@ -93,8 +98,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     .update({ status: "claimed" })
     .eq("id", listingId);
 
-  const book = listing.books as { title: string; author: string } | null;
-  const offerer = listing.members as { discord_id: string } | null;
+  const book = listing.books as unknown as { title: string; author: string } | null;
+  const offerer = listing.members as unknown as { discord_id: string } | null;
 
   await interaction.editReply(
     `You've claimed **${book?.title}**! The offerer has been notified.`
